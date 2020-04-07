@@ -88,8 +88,8 @@ if [ -z $SIGNED_VERSION ]; then
 fi
 
 HEXKEY=$(az storage account keys list --account-name $ACCOUNT_NAME | jq '.[0].value' \
-    | tr -d '\"' | base64 -d \
-    | od -x -An --endian big | sed 's/ //g' | tr -d '\n')
+    | tr -d '\"' | base64 -d -w0 | xxd -p -c256)
+echo $HEXKEY
 
 STRING_TO_HASH="${ACCOUNT_NAME}
 ${SIGNED_PERMISSIONS}
@@ -104,7 +104,7 @@ ${SIGNED_VERSION}
 
 SIGNATURE=$(echo -n "${STRING_TO_HASH}" \
     | openssl dgst -sha256 -mac hmac -macopt hexkey:$HEXKEY -binary \
-    | base64 | tr -d '\n' \
+    | base64 -w0 \
     | python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.stdin.read()))")
 
 echo "https://${ACCOUNT_NAME}.blob.core.windows.net${BLOB_PATH}?${PARAMS}sig=${SIGNATURE}"
